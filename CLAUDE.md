@@ -1,7 +1,8 @@
 # AgentHive — Claude Code Project Guide
 
-> **Stack:** Next.js 15 · TypeScript · Tailwind CSS · FastAPI · Python · Neon (PostgreSQL) · Anthropic Claude · Stripe
+> **Stack:** Next.js 15 · TypeScript · Tailwind CSS · FastAPI · Python · Neon (PostgreSQL) · **OpenAI API** · Stripe
 > **Goal:** SaaS platform where 6 specialized AI agents collaborate to automate business workflows.
+> **LLM:** OpenAI `gpt-4o-mini` (default) via the `openai` Python SDK in JSON mode.
 
 ---
 
@@ -10,7 +11,7 @@
 ```
 agenthive/
 ├── frontend/        # Next.js 15 (App Router) + TS + Tailwind
-├── backend/         # FastAPI + Python 3.12 + asyncpg + CrewAI
+├── backend/         # FastAPI + Python 3.12 + asyncpg + lightweight CrewManager
 ├── .claude/         # Claude Code config, skills, agents
 ├── project_plan.md  # Single source of truth for the build
 ├── AGENTS.md        # Spec for the 6 in-product AI agents
@@ -56,11 +57,14 @@ Authoritative spec for code shape, schemas, env vars, and routes lives in **`pro
 - UUID primary keys, `TIMESTAMPTZ` for time columns, JSONB for flexible config.
 - Add an index for every foreign-key column and every column you filter on.
 
-### AI / Claude API
-- Model: `claude-sonnet-4-20250514` (per project_plan.md).
-- Always enable **prompt caching** on system prompts and shared context (`cache_control`).
-- Agents must return strict JSON — never markdown — and the caller must `json.loads` defensively.
-- Use the `claude-api` skill when adding/modifying any Anthropic SDK call.
+### AI / OpenAI API
+- Model: `gpt-4o-mini` (default; overridable via `OPENAI_MODEL` env var).
+- Use the official `openai` Python SDK only — no CrewAI, no LangChain, no Anthropic SDK.
+- Always call Chat Completions with `response_format={"type": "json_object"}` — JSON mode.
+- **JSON-mode constraint:** the system prompt must contain the literal word "JSON" or OpenAI will reject the request.
+- Agents return strict JSON — never markdown. The caller must `json.loads` defensively (return `{"status":"error","raw":...}` on failure).
+- Keep `temperature` low (≤0.5) for structured-output agents (Scout/Finance/Analyst); a bit higher (~0.7) is okay for Outreach/Content.
+- Use `fetch-library-docs` for OpenAI SDK API questions — don't guess parameter shapes.
 
 ### Stripe
 - Use **Checkout Sessions** for one-off and subscription billing (per stripe best-practices skill).
@@ -74,7 +78,7 @@ Authoritative spec for code shape, schemas, env vars, and routes lives in **`pro
 | Trigger | Skill |
 |---|---|
 | Any UI / component / page work | `ui-ux-pro-max`, `frontend-design:frontend-design` |
-| Touching Anthropic SDK code | `claude-api` |
+| Touching OpenAI SDK / agent code | `fetch-library-docs` (for `openai` SDK docs) |
 | Looking up React/Next/FastAPI/Tailwind APIs | `fetch-library-docs` |
 | Stripe integration changes | `stripe:stripe-best-practices` |
 | Stripe error debugging | `stripe:explain-error`, `stripe:test-cards` |

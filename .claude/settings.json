@@ -54,7 +54,6 @@
   "enabledSkills": [
     "ui-ux-pro-max",
     "frontend-design:frontend-design",
-    "claude-api",
     "fetch-library-docs",
     "simplify",
     "less-permission-prompts",

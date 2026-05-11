@@ -5,13 +5,13 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Next.js](https://img.shields.io/badge/Next.js-15-black)](https://nextjs.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688)](https://fastapi.tiangolo.com/)
-[![Anthropic Claude](https://img.shields.io/badge/Claude-Sonnet_4-D97757)](https://www.anthropic.com/)
+[![OpenAI](https://img.shields.io/badge/OpenAI-gpt--4o--mini-412991)](https://platform.openai.com/)
 
 ---
 
 ## ✨ What is AgentHive?
 
-AgentHive is a SaaS platform where you assemble **AI agents** into **workflows**, hit run, and watch them collaborate — finding leads, sending emails, drafting content, crunching analytics, issuing invoices, and replying to support — all powered by Claude.
+AgentHive is a SaaS platform where you assemble **AI agents** into **workflows**, hit run, and watch them collaborate — finding leads, sending emails, drafting content, crunching analytics, issuing invoices, and replying to support — all powered by the **OpenAI API** (`gpt-4o-mini` by default) in JSON mode.
 
 ### The 6 Agents
 
@@ -33,9 +33,9 @@ Full spec → [`AGENTS.md`](AGENTS.md)
 | Layer | Tech |
 |---|---|
 | Frontend | Next.js 15 · React 19 · TypeScript · Tailwind · Zustand · React Query · Recharts |
-| Backend | FastAPI · Python 3.12 · SQLAlchemy async · asyncpg · CrewAI · LangChain |
+| Backend | FastAPI · Python 3.12 · SQLAlchemy async · asyncpg |
 | Database | Neon (Serverless PostgreSQL) |
-| AI | Anthropic Claude (`claude-sonnet-4-20250514`) · OpenAI (optional) |
+| AI | OpenAI Chat Completions API · `gpt-4o-mini` (default) · JSON mode |
 | Payments | Stripe (Checkout Sessions + Webhooks) |
 | Deploy | Vercel (frontend) · Railway (backend) · Cloudflare R2 (assets) |
 
@@ -49,7 +49,7 @@ cd backend
 python -m venv venv
 venv\Scripts\activate           # macOS/Linux: source venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env             # fill in DATABASE_URL, ANTHROPIC_API_KEY, etc.
+cp .env.example .env             # fill in DATABASE_URL, OPENAI_API_KEY, etc.
 uvicorn app.main:app --reload --port 8000
 
 # Frontend (new terminal)
@@ -72,7 +72,7 @@ psql $DATABASE_URL -f backend/migrations/001_initial.sql
 ```
 agenthive/
 ├── frontend/        # Next.js 15 App Router
-├── backend/         # FastAPI + agents + CrewAI
+├── backend/         # FastAPI + OpenAI-powered agents
 ├── .claude/         # Claude Code config & enabled skills
 ├── project_plan.md  # Authoritative build spec
 ├── AGENTS.md        # In-product AI agent spec

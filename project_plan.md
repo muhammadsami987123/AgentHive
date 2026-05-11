@@ -1,8 +1,9 @@
 # AgentHive — Multi-Agent Business Automation Platform
 ## Full Project Plan for Claude Code
 
-> **Stack:** Next.js 15 · TypeScript · Tailwind CSS · FastAPI · Python · Neon (PostgreSQL)
+> **Stack:** Next.js 15 · TypeScript · Tailwind CSS · FastAPI · Python · Neon (PostgreSQL) · **OpenAI API**
 > **Goal:** Build a SaaS platform where specialized AI agents collaborate to automate full business workflows.
+> **LLM:** OpenAI `gpt-4o-mini` (default) via the official `openai` Python SDK. JSON-mode responses.
 
 ---
 
@@ -91,7 +92,7 @@ agenthive/
 │   │   │   ├── finance_agent.py
 │   │   │   └── support_agent.py
 │   │   ├── crew/
-│   │   │   ├── crew_manager.py  # CrewAI orchestration
+│   │   │   ├── crew_manager.py  # Lightweight multi-agent orchestration
 │   │   │   └── tasks.py
 │   │   ├── services/
 │   │   │   ├── email_service.py
@@ -255,10 +256,6 @@ passlib[bcrypt]==1.7.4
 python-multipart==0.0.12
 httpx==0.27.0
 openai==1.54.0
-anthropic==0.39.0
-crewai==0.80.0
-langchain==0.3.7
-langchain-anthropic==0.3.0
 stripe==11.1.0
 python-dotenv==1.0.1
 websockets==13.1
@@ -275,9 +272,9 @@ SECRET_KEY=your-super-secret-key-here
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=10080
 
-# AI
-ANTHROPIC_API_KEY=your-anthropic-key
+# AI (OpenAI)
 OPENAI_API_KEY=your-openai-key
+OPENAI_MODEL=gpt-4o-mini
 
 # Stripe
 STRIPE_SECRET_KEY=your-stripe-secret
@@ -335,8 +332,8 @@ class Settings(BaseSettings):
     SECRET_KEY: str
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 10080
-    ANTHROPIC_API_KEY: str
-    OPENAI_API_KEY: str = ""
+    OPENAI_API_KEY: str
+    OPENAI_MODEL: str = "gpt-4o-mini"
     STRIPE_SECRET_KEY: str
     STRIPE_WEBHOOK_SECRET: str
     SMTP_HOST: str = ""
@@ -380,7 +377,7 @@ async def get_db():
 
 ### `backend/app/agents/base_agent.py`
 ```python
-from anthropic import Anthropic
+from openai import OpenAI
 from app.config import settings
 import json
 
@@ -388,19 +385,24 @@ class BaseAgent:
     def __init__(self, name: str, system_prompt: str):
         self.name = name
         self.system_prompt = system_prompt
-        self.client = Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+        self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
     async def run(self, task: str, context: dict = {}) -> dict:
         raise NotImplementedError("Each agent must implement run()")
 
-    def _call_claude(self, user_message: str, max_tokens: int = 2048) -> str:
-        response = self.client.messages.create(
-            model="claude-sonnet-4-20250514",
+    def _call_llm(self, user_message: str, max_tokens: int = 2048) -> str:
+        """Call OpenAI Chat Completions in JSON mode. Returns raw text."""
+        response = self.client.chat.completions.create(
+            model=settings.OPENAI_MODEL,
             max_tokens=max_tokens,
-            system=self.system_prompt,
-            messages=[{"role": "user", "content": user_message}]
+            temperature=0.4,
+            response_format={"type": "json_object"},
+            messages=[
+                {"role": "system", "content": self.system_prompt},
+                {"role": "user", "content": user_message},
+            ],
         )
-        return response.content[0].text
+        return response.choices[0].message.content
 ```
 
 ### `backend/app/agents/scout_agent.py`
@@ -433,7 +435,7 @@ Return a JSON array of leads with this structure:
   "notes": "Why this lead is a good fit"
 }}]
 """
-        result = self._call_claude(prompt)
+        result = self._call_llm(prompt)
         try:
             leads = json.loads(result)
             return {"status": "success", "leads": leads, "count": len(leads)}
@@ -472,7 +474,7 @@ Return JSON:
   "follow_up_2": "Follow-up email after 7 days"
 }}
 """
-        result = self._call_claude(prompt)
+        result = self._call_llm(prompt)
         try:
             email = json.loads(result)
             return {"status": "success", "email": email}
@@ -511,7 +513,7 @@ Return JSON:
   "best_post_time": "Tuesday 9AM"
 }}
 """
-        result = self._call_claude(prompt)
+        result = self._call_llm(prompt)
         try:
             content = json.loads(result)
             return {"status": "success", "content": content, "platform": platform}
@@ -1122,7 +1124,8 @@ npm run dev
 - All agent classes extend `BaseAgent` — add new agents by creating a new file in `backend/app/agents/` and registering in `crew_manager.py`
 - Neon uses standard PostgreSQL — use `asyncpg` driver with the connection string from Neon dashboard
 - WebSocket endpoint for real-time logs should be at `ws://localhost:8000/api/ws/runs/{run_id}`
-- All Claude API calls use model `claude-sonnet-4-20250514`
+- All LLM calls go through OpenAI's Chat Completions API in **JSON mode** (`response_format={"type": "json_object"}`). Default model: `gpt-4o-mini` (override via `OPENAI_MODEL` env var).
+- The system prompt for every agent must contain the literal word "JSON" — required by OpenAI JSON mode.
 - Frontend state management: use Zustand for auth/user store, React Query for server data
 - Use `clsx` for conditional Tailwind classes throughout components
 

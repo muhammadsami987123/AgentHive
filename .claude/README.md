@@ -13,7 +13,7 @@ This folder configures Claude Code's behavior for the **AgentHive** project.
 |---|---|
 | `ui-ux-pro-max` | Any UI/component/page work |
 | `frontend-design:frontend-design` | Building polished frontend interfaces |
-| `claude-api` | Touching Anthropic SDK code (agents/) |
+| `fetch-library-docs` | Looking up `openai` SDK API shapes |
 | `fetch-library-docs` | Looking up React/Next/FastAPI/Tailwind APIs |
 | `simplify` | Reviewing changes for reuse & quality |
 | `less-permission-prompts` | Trimming repeated permission prompts |

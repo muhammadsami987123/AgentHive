@@ -2,9 +2,11 @@
 
 > This document specifies the **6 specialized AI agents** that ship inside AgentHive. Each agent extends `backend/app/agents/base_agent.py`, is registered in `crew_manager.AGENT_REGISTRY`, and is orchestrated by `CrewManager.run_workflow()`.
 
-**Model for every agent:** `claude-sonnet-4-20250514`
+**LLM:** OpenAI Chat Completions API (`openai` Python SDK).
+**Default model:** `gpt-4o-mini` (configurable via the `OPENAI_MODEL` env var).
 **Output contract:** strict JSON only — no markdown, no prose. The caller will `json.loads` the response.
-**Prompt caching:** enable `cache_control` on the system prompt and any large shared context.
+**JSON mode:** every call sets `response_format={"type": "json_object"}`. The system prompt **must** contain the literal word "JSON" (OpenAI requirement).
+**Temperature defaults:** 0.4 for structured agents (Scout, Analyst, Finance, Support); 0.7 for creative agents (Outreach, Content).
 
 ---
 
@@ -194,7 +196,7 @@ All keys map 1:1 to the `agents.name` column in Postgres.
 
 ## Testing Agents
 
-- Unit-test each agent with a stub `_call_claude` that returns canned JSON — verify JSON parsing & error paths.
+- Unit-test each agent with a stub `_call_llm` that returns canned JSON — verify JSON parsing & error paths.
 - Integration-test `CrewManager.run_workflow()` with a 2-step workflow using mocked agents.
 - For live smoke tests, hit `POST /api/workflows/{id}/run` and watch logs via the WebSocket stream.
 
